@@ -1,6 +1,6 @@
 // using LEGACY Named Credentials
 final HttpRequest req = new HttpRequest();
-req.setEndpoint('callout:VictronEnergy/v2/users/me');
+req.setEndpoint('callout:VictronEnergyLegacy/v2/users/me');
 req.setHeader('Accept', 'application/json');
 req.setHeader('X-Authorization', 'Bearer {!$Credential.OAuthToken}');
 req.setMethod('GET');
