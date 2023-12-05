@@ -2,7 +2,6 @@ public class UsernamePassword_Creds_AuthProvider extends Auth.AuthProviderPlugin
     // constants
     public static final String CUSTOM_METADATA_TYPE = 'UsernamePassword_Credentials__mdt';
     public static final String AUTH_PROVIDER_NAME = 'UsernamePassword_Credentials';
-    public static final String USERNAME = 'Dummy User';
 
     // declarations
     private IRefreshTokenGenerator generator = new DefaultRefreshTokenGenerator();
@@ -28,7 +27,6 @@ public class UsernamePassword_Creds_AuthProvider extends Auth.AuthProviderPlugin
         Map<String, String> config,
         Auth.AuthProviderCallbackState callbackState
     ) {
-        System.debug('handleCallback');
         // get access token
         final String access_token = this.retrieveToken(config);
         final String refresh_token = this.generateRefreshToken();
@@ -40,6 +38,21 @@ public class UsernamePassword_Creds_AuthProvider extends Auth.AuthProviderPlugin
         Map<String, String> authProviderConfiguration,
         Auth.AuthProviderTokenResponse response
     ) {
+        // get userinfo
+        final Http h = new Http();
+        final HttpRequest req = new HttpRequest();
+        req.setEndpoint('https://vrmapi.victronenergy.com/v2/users/me');
+        req.setHeader('Content-Type', 'application/json');
+        req.setHeader('x-authorization', 'Bearer ' + response.oauthToken);
+        req.setMethod('GET');
+        final HttpResponse resUserinfo = h.send(req);
+        
+        // get name
+        final Map<String, Object> userinfo = (Map<String, Object>) JSON.deserializeUntyped(resUserinfo.getBody());
+        final Map<String, Object> user = (Map<String,Object>)userinfo.get('user');
+        final String name = (String)user.get('name');
+
+        // return
         return new Auth.UserData(
             null,
             null,
@@ -47,7 +60,7 @@ public class UsernamePassword_Creds_AuthProvider extends Auth.AuthProviderPlugin
             null,
             null,
             null,
-            USERNAME,
+            name,
             null,
             AUTH_PROVIDER_NAME,
             null,
@@ -58,8 +71,8 @@ public class UsernamePassword_Creds_AuthProvider extends Auth.AuthProviderPlugin
     public override Auth.OAuthRefreshResult refresh(Map<String, String> config, String refreshToken) {
         // generate dummy refresh token and get new access token
         final String newRefreshToken = this.generateRefreshToken();
-        final String access_token = this.retrieveToken(config);
-        return new Auth.OAuthRefreshResult(access_token, newRefreshToken);
+        final String accessToken = this.retrieveToken(config);
+        return new Auth.OAuthRefreshResult(accessToken, newRefreshToken);
     }
 
     private String retrieveToken(Map<String, String> config) {
@@ -98,9 +111,10 @@ public class UsernamePassword_Creds_AuthProvider extends Auth.AuthProviderPlugin
             throw new UsernamePassword_Creds_Exception();
         }
         final Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-        String token =  (String) data.get('token');
-        System.debug('Extracted token: ' + token);
-        return token;
+        String accessToken =  (String) data.get('token');
+        
+        // return
+        return accessToken;
     }
 
     private String getAndEncode(Map<String, String> config, String key) {
